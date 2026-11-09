@@ -218,6 +218,73 @@ int main() {
         assert(tracker.total() == 1);
     }
 
-    std::cout << "stable_tracker_test OK\n";
+    {
+        // Skenario S6: Karung Berdempetan / Close Succession (Tailgating)
+        StableTracker tracker;
+        double now = 0.0;
+        int sackA = 0;
+        int sackB = 0;
+
+        // Dua karung berurutan sangat dekat (selisih Y hanya 25 px)
+        for (const float y : {50.0F, 65.0F, 80.0F, 96.0F, 115.0F, 130.0F}) {
+            now += 0.1;
+            std::vector<Detection> batch;
+            // Karung depan (A)
+            batch.push_back(detection(y, 0.9F, 50.0F));
+            // Karung belakang (B), membuntuti 25 px di belakangnya
+            if (y - 25.0F >= 45.0F) {
+                batch.push_back(detection(y - 25.0F, 0.9F, 50.0F));
+            }
+            const auto res = tracker.update(batch, now, 68, 92, 0, 100);
+            if (res.assignments[0] && res.assignments[0]->sackId > 0) {
+                sackA = res.assignments[0]->sackId;
+            }
+            if (batch.size() > 1 && res.assignments[1] && res.assignments[1]->sackId > 0) {
+                sackB = res.assignments[1]->sackId;
+            }
+        }
+        // Kedua karung harus memiliki sack_id berbeda dan keduanya berhasil dihitung
+        assert(sackA > 0 && sackB > 0);
+        assert(sackA != sackB);
+        assert(tracker.total() == 2);
+    }
+
+    {
+        // Skenario S8: Network Glitch / Time Jump (RTSP Reconnection Recovery)
+        StableTracker tracker;
+        double now = 0.0;
+
+        // Karung terdeteksi sebelum glitch di Y=60
+        now += 0.1;
+        auto preGlitch = tracker.update({detection(60.0F)}, now, 68, 92, 0, 100);
+        assert(preGlitch.assignments[0]);
+        int preGlitchTrack = preGlitch.assignments[0]->trackId;
+        static_cast<void>(preGlitchTrack);
+
+        // Jeda 3.5 detik (simulasi socket RTSP reconnecting)
+        now += 3.5;
+        // Karung muncul kembali di Y=80 (di dalam checkpoint)
+        auto postGlitch = tracker.update({detection(80.0F)}, now, 68, 92, 0, 100);
+        assert(postGlitch.assignments[0]);
+        assert(postGlitch.assignments[0]->trackId == preGlitchTrack);
+        assert(postGlitch.assignments[0]->pending);
+
+        // Karung melintasi Line 2
+        now += 0.1;
+        auto countGlitch = tracker.update({detection(96.0F)}, now, 68, 92, 0, 100);
+        assert(countGlitch.assignments[0]);
+        assert(countGlitch.assignments[0]->counted);
+        assert(tracker.total() == 1);
+    }
+
+    std::cout << "[PASS] S1: Normal Baseline Flow\n"
+              << "[PASS] S2: Stop-and-Go Conveyor (10s Pause & Resume)\n"
+              << "[PASS] S3: Fast Moving / High Speed Crossing\n"
+              << "[PASS] S4: Motion Blur & Low Confidence Persistence\n"
+              << "[PASS] S5: Edge-of-Conveyor & Tilted Bags\n"
+              << "[PASS] S6: Close Succession & Tailgating Bags\n"
+              << "[PASS] S7: Stationary Jitter & Vibration Prevention\n"
+              << "[PASS] S8: Time Jumps & Network Glitch Recovery\n"
+              << "stable_tracker_test OK\n";
     return 0;
 }
