@@ -1,5 +1,5 @@
-#include "count_logger.hpp"
-#include "report_paths.hpp"
+#include "storage/count_logger.hpp"
+#include "storage/report_paths.hpp"
 
 #include <ctime>
 #include <fstream>

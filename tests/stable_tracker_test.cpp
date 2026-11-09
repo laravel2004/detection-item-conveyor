@@ -1,5 +1,5 @@
-#include "report_paths.hpp"
-#include "stable_tracker.hpp"
+#include "storage/report_paths.hpp"
+#include "tracker/stable_tracker.hpp"
 
 #include <cassert>
 #include <iostream>

@@ -40,17 +40,17 @@ if(NOT EXISTS "${ONNXRUNTIME_NATIVE_DIR}/onnxruntime.lib" OR
 endif()
 
 add_library(sack_core
-    src/app_config.cpp
-    src/async_capture.cpp
-    src/count_logger.cpp
-    src/path_resolver.cpp
-    src/report_paths.cpp
-    src/sack_counter_app.cpp
-    src/stable_tracker.cpp
-    src/ui_window.cpp
-    src/video_recorder.cpp
-    src/visual_renderer.cpp
-    src/yolo_detector.cpp
+    src/app/app_config.cpp
+    src/app/path_resolver.cpp
+    src/app/sack_counter_app.cpp
+    src/capture/async_capture.cpp
+    src/detector/yolo_detector.cpp
+    src/storage/count_logger.cpp
+    src/storage/report_paths.cpp
+    src/storage/video_recorder.cpp
+    src/tracker/stable_tracker.cpp
+    src/ui/ui_window.cpp
+    src/ui/visual_renderer.cpp
 )
 target_include_directories(sack_core PUBLIC
     src

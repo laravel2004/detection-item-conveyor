@@ -1,271 +1,205 @@
-# Rencana Implementasi: Modularisasi File per Fungsi & Penerapan Pipeline-Facade Pattern
+# Rencana Implementasi: Restrukturisasi Direktori Subfolder di dalam `src/`
 
-Dokumen ini merupakan panduan spesifikasi arsitektur teknis dan rencana implementasi (*Refactoring & Architectural Ticket*) yang dirancang khusus agar mudah dipahami dan dieksekusi oleh **Junior Programmer** atau **AI Model (tier standar/hemat)**. Tujuannya adalah memecah file monolitis `src/main.cpp` menjadi modul-modul independen berdasarkan tanggung jawabnya (*Single Responsibility Principle*) menggunakan **Pipeline & Facade Design Pattern** yang sederhana dan intuitif.
+Dokumen ini merupakan panduan spesifikasi dan rencana kerja teknis (*Folder Hierarchy Refactoring Ticket*) yang disusun secara terperinci agar mudah dieksekusi oleh **Junior Programmer** atau **AI Model (tier standar/hemat)**. Tujuannya adalah mengelompokkan file-file di dalam direktori `src/` ke dalam subfolder berbasis domain fungsional (*Package by Feature / Layered Architecture*) agar arsitektur kode lebih rapi, terisolasi, dan mudah dipelihara.
 
 ---
 
 ## 1. Latar Belakang & Masalah Saat Ini
 
-Saat ini, file [`src/main.cpp`](file:///C:/dev/cpp_rtsp/src/main.cpp) memiliki ukuran lebih dari 600 baris dan menjadi sebuah *"God File"* (file serba tahu) yang menggabungkan terlalu banyak fungsi berbeda:
-1. **Parsing Argumen CLI & Environment Variables** (`parseArguments`, `printUsage`).
-2. **Pencarian Path Dinamis** (`getExecutablePath`, `findProjectRoot`, `resolveModelPath`).
-3. **Logika UI & Window Management** (`fitFrameToWindow`, `cv::namedWindow`, penanganan shortcut tombol `h`, `m`, `f`, `q`, Win32 API).
-4. **Rendering & Anotasi Visual** (menggambar checkpoint line, teks total sak, label box beraneka warna, status LOW conf).
-5. **Pencatatan Video Rekaman** (inisialisasi `cv::VideoWriter` dan penulisan frame).
-6. **Pencatatan Laporan Jam** (`appendCount`, formatting waktu).
-7. **Orchestrator Loop Utama** (koordinasi capture $\rightarrow$ inferensi $\rightarrow$ tracking $\rightarrow$ render $\rightarrow$ save).
-
-**Dampaknya:**
-- Kode sulit dibaca dan dipelajari oleh programmer junior.
-- Perubahan pada satu fitur (misalnya tampilan UI) berisiko merusak logika lain (misalnya penulisan report atau FPS).
-- Sulit dibuatkan unit test modular untuk masing-masing fungsi.
+Meskipun kode telah dipecah menjadi modul-modul independen (Pipeline & Facade Pattern), saat ini seluruh file header (`.hpp`) dan implementasi (`.cpp`) masih berada di satu tingkat direktori yang sama (*flat structure*) di dalam `src/`:
+- Terdapat 12 file `.hpp` dan 12 file `.cpp` yang bercampur baur di `src/`.
+- Developer baru atau junior programmer kesulitan membedakan mana file yang berhubungan dengan *UI*, *Storage/Logging*, *AI Detector*, *Tracking Logic*, atau *Core Application*.
+- Mengelompokkan file ke dalam subfolder fungsional akan memperjelas batas-batas modul (*modular boundaries*) dan mencegah ketergantungan silang (*circular dependencies*).
 
 ---
 
-## 2. Pilihan Design Pattern: Pipeline & Facade Pattern
+## 2. Rancangan Struktur Direktori Subfolder Baru
 
-Untuk menjaga kesederhanaan tanpa *over-engineering*, dipilih kombinasi 2 pola desain yang paling mudah dipahami:
-
-1. **Pipeline Pattern (Pola Aliran Pipa):**
-   - Setiap frame video mengalir melalui jalur pemrosesan data satu arah yang jelas dan berurutan:
-     $$\text{Frame Masuk} \rightarrow \text{YOLO Detect} \rightarrow \text{Stable Tracker} \rightarrow \text{Visual Renderer} \rightarrow \text{UI Display / Recorder / Logger}$$
-2. **Facade Pattern (Pola Pengendali Sederhana - `SackCounterApp`):**
-   - Menyediakan satu kelas antarmuka utama (`SackCounterApp`) yang mengkoordinasikan semua modul.
-   - File `main.cpp` menjadi sangat ramping (< 35 baris kode) yang hanya bertugas menginisialisasi konfigurasi dan memanggil `app.run()`.
-
----
-
-## 3. Struktur Modul & Pemisahan File Baru
-
-Struktur direktori `src/` yang baru akan dibagi rapi per fungsi:
+Berikut adalah rancangan pembagian subfolder yang bersih dan modular:
 
 ```text
 src/
-├── app_config.hpp / .cpp         # Tanggung Jawab 1: Parsing CLI, argumen --source, options
-├── path_resolver.hpp / .cpp      # Tanggung Jawab 2: Resolusi dinamis model & project root
-├── visual_renderer.hpp / .cpp    # Tanggung Jawab 3: Gambar garis, bounding box, label teks
-├── ui_window.hpp / .cpp          # Tanggung Jawab 4: Window HighGUI, resize, shortcut H/M/F/Q
-├── video_recorder.hpp / .cpp     # Tanggung Jawab 5: Penulisan file video MP4
-├── count_logger.hpp / .cpp       # Tanggung Jawab 6: Pencatatan file teks laporan per jam
-├── sack_counter_app.hpp / .cpp   # Facade: Menjalankan pipeline loop utama
-├── async_capture.hpp / .cpp      # (Tetap) Threaded RTSP frame capture
-├── yolo_detector.hpp / .cpp      # (Tetap) Inferensi ONNX Runtime DirectML
-├── stable_tracker.hpp / .cpp     # (Tetap) Pelacakan & validasi hitung karung
-├── report_paths.hpp / .cpp       # (Tetap) Path generator laporan
-└── main.cpp                      # Entry point bersih (< 35 baris)
+├── app/                        # 1. Core Aplikasi & Konfigurasi
+│   ├── app_config.hpp / .cpp
+│   ├── path_resolver.hpp / .cpp
+│   └── sack_counter_app.hpp / .cpp
+│
+├── capture/                    # 2. Pengambilan Stream Video / RTSP
+│   └── async_capture.hpp / .cpp
+│
+├── detector/                   # 3. Inferensi YOLO & ONNX Runtime DirectML
+│   └── yolo_detector.hpp / .cpp
+│
+├── tracker/                    # 4. Multi-Object Tracking & Logika Hitung Sak
+│   └── stable_tracker.hpp / .cpp
+│
+├── ui/                         # 5. GUI HighGUI & Rendering Visual
+│   ├── ui_window.hpp / .cpp
+│   └── visual_renderer.hpp / .cpp
+│
+├── storage/                    # 6. Perekaman MP4 & Pelaporan Teks Jam
+│   ├── count_logger.hpp / .cpp
+│   ├── report_paths.hpp / .cpp
+│   └── video_recorder.hpp / .cpp
+│
+└── main.cpp                    # Entry Point Utama Aplikasi
 ```
 
 ---
 
-## 4. Diagram Arsitektur & Alur Eksekusi
-
-### A. Class Diagram (Facade & Components)
+## 3. Diagram Arsitektur & Dependensi Antar Folder
 
 ```mermaid
-classDiagram
-    class SackCounterApp {
-        -AppConfig config_
-        -std::unique_ptr<YoloDetector> detector_
-        -std::unique_ptr<StableTracker> tracker_
-        -std::unique_ptr<VisualRenderer> renderer_
-        -std::unique_ptr<UIWindow> window_
-        -std::unique_ptr<VideoRecorder> recorder_
-        -std::unique_ptr<CountLogger> logger_
-        +run() int
-    }
+graph TD
+    Main["src/main.cpp<br/>(Entry Point)"] --> App["src/app/<br/>(SackCounterApp, Config, PathResolver)"]
+    
+    App --> Capture["src/capture/<br/>(AsyncCapture)"]
+    App --> Detector["src/detector/<br/>(YoloDetector)"]
+    App --> Tracker["src/tracker/<br/>(StableTracker)"]
+    App --> UI["src/ui/<br/>(UIWindow, VisualRenderer)"]
+    App --> Storage["src/storage/<br/>(VideoRecorder, CountLogger, ReportPaths)"]
 
-    class AppConfig {
-        +string source
-        +path model
-        +string device
-        +bool save
-        +bool display
-        +int displayWidth
-        +int maxFrames
-        +parse(argc, argv)$ AppConfig
-    }
+    UI -.-> Tracker
+    Storage -.-> App
 
-    class VisualRenderer {
-        +render(frame, detections, tracking, total, fps) Mat
-    }
-
-    class UIWindow {
-        +show(frame) bool
-        +isQuitRequested() bool
-    }
-
-    class VideoRecorder {
-        +write(frame, fps) void
-    }
-
-    class CountLogger {
-        +logCount(total, sackId, frameIndex) void
-    }
-
-    SackCounterApp --> AppConfig
-    SackCounterApp --> VisualRenderer
-    SackCounterApp --> UIWindow
-    SackCounterApp --> VideoRecorder
-    SackCounterApp --> CountLogger
-```
-
-### B. Sequence Diagram (Pipeline Pemrosesan Frame)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Operator
-    participant Main as main()
-    participant App as SackCounterApp
-    participant Capture as AsyncCapture
-    participant Detector as YoloDetector
-    participant Tracker as StableTracker
-    participant Renderer as VisualRenderer
-    participant Window as UIWindow
-    participant Recorder as VideoRecorder
-    participant Logger as CountLogger
-
-    Main->>App: app.run()
-    loop Setiap Frame Video
-        App->>Capture: waitForFrame()
-        Capture-->>App: frame Mat
-        App->>Detector: detect(frame)
-        Detector-->>App: detections vector
-        App->>Tracker: update(detections)
-        Tracker-->>App: TrackingResult (assignments, countEvents)
-        
-        opt Ada Karung Baru Terhitung
-            App->>Logger: logCount(total, sackId)
-        end
-        
-        App->>Renderer: render(frame, detections, tracking)
-        Renderer-->>App: annotated Mat
-        
-        opt Opsi Save Aktif
-            App->>Recorder: write(annotated)
-        end
-        
-        opt Opsi Display Aktif
-            App->>Window: show(annotated)
-            Window-->>App: handle key (H, M, F, Q)
-        end
-    end
-    Window-->>App: Tombol Q / Window Ditutup
-    App-->>Main: Exit Code 0
+    classDef core fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef feature fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    class Main,App core;
+    class Capture,Detector,Tracker,UI,Storage feature;
 ```
 
 ---
 
-## 5. Rincian Tahapan Implementasi & Estimasi Waktu
+## 4. Rincian Tahapan Implementasi & Estimasi Waktu
 
-Total Estimasi Waktu: **10 - 12 Jam Kerja**
+Total Estimasi Waktu: **4 - 6 Jam Kerja**
 
-| Tahap | Fokus Pekerjaan | Modul Baru | Estimasi Waktu |
+| Tahap | Fokus Pekerjaan | Aksi Teknis | Estimasi Waktu |
 | :--- | :--- | :--- | :--- |
-| **Tahap 1** | Ekstraksi Konfigurasi & Resolusi Path | `app_config`, `path_resolver` | 2 Jam |
-| **Tahap 2** | Ekstraksi Rendering Visual & UI Window Manager | `visual_renderer`, `ui_window` | 3 Jam |
-| **Tahap 3** | Ekstraksi Perekam Video & Logger Laporan | `video_recorder`, `count_logger` | 2 Jam |
-| **Tahap 4** | Implementasi Facade `SackCounterApp` & Pembersihan `main.cpp` | `sack_counter_app`, `main.cpp` | 2 Jam |
-| **Tahap 5** | Pembaruan `CMakeLists.txt` & Regression Testing | `CMakeLists.txt`, `build.ps1` | 1 - 2 Jam |
+| **Tahap 1** | Pembuatan Direktori Subfolder | Buat folder `app/`, `capture/`, `detector/`, `tracker/`, `ui/`, `storage/` | 30 Menit |
+| **Tahap 2** | Pemindahan File (*File Relocation*) | Pindahkan file `.hpp` & `.cpp` ke subfolder masing-masing via `git mv` | 1 Jam |
+| **Tahap 3** | Pembaruan Path `#include` | Sesuaikan path include di source code (`#include "folder/file.hpp"`) | 1 - 2 Jam |
+| **Tahap 4** | Pembaruan `CMakeLists.txt` & Tests | Update path source file di CMake dan include test | 1 Jam |
+| **Tahap 5** | Kompilasi & Verifikasi Unit Test | Eksekusi `build.ps1` dan `run_benchmark.ps1` (Zero Regression) | 1 Jam |
 
 ---
 
-### Tahap 1: Ekstraksi Konfigurasi & Resolusi Path
-- **Tujuan:** Memindahkan struct opsi dan fungsi pencarian file ke modul khusus.
+### Tahap 1: Pembuatan Direktori Subfolder
 - **Langkah Kerja:**
-  1. Buat [`src/app_config.hpp`](file:///C:/dev/cpp_rtsp/src/app_config.hpp) dan `src/app_config.cpp`:
-     - Memindahkan `struct AppConfig` (sebelumnya `Options`).
-     - Memindahkan fungsi `parseArguments()` dan `printUsage()`.
-  2. Buat [`src/path_resolver.hpp`](file:///C:/dev/cpp_rtsp/src/path_resolver.hpp) dan `src/path_resolver.cpp`:
-     - Memindahkan `getExecutablePath()`, `findProjectRoot()`, dan `resolveModelPath()`.
+  Buat 6 subfolder di dalam direktori `src/`:
+  - `src/app/`
+  - `src/capture/`
+  - `src/detector/`
+  - `src/tracker/`
+  - `src/ui/`
+  - `src/storage/`
 
 ---
 
-### Tahap 2: Ekstraksi Rendering Visual & UI Window Manager
-- **Tujuan:** Memisahkan antara "menggambar ke gambar" dan "menampilkan jendela GUI".
-- **Langkah Kerja:**
-  1. Buat [`src/visual_renderer.hpp`](file:///C:/dev/cpp_rtsp/src/visual_renderer.hpp) dan `src/visual_renderer.cpp`:
-     - Memindahkan `drawLabel()`, garis checkpoint, bounding box (normal & LOW conf), dan teks overlay total sak/FPS.
-  2. Buat [`src/ui_window.hpp`](file:///C:/dev/cpp_rtsp/src/ui_window.hpp) dan `src/ui_window.cpp`:
-     - Memindahkan `fitFrameToWindow()`.
-     - Mengelola pembuatan window `cv::namedWindow` resizable.
-     - Mengelola shortcut keyboard (`Q`, `H` toggle hide, `M` minimize, `F` fullscreen).
+### Tahap 2: Pemindahan File (*File Relocation*)
+Gunakan perintah pemindahan Git (`git mv`) agar riwayat commit (*commit history*) tetap terjaga:
+```powershell
+git mv src/app_config.* src/app/
+git mv src/path_resolver.* src/app/
+git mv src/sack_counter_app.* src/app/
+
+git mv src/async_capture.* src/capture/
+
+git mv src/yolo_detector.* src/detector/
+
+git mv src/stable_tracker.* src/tracker/
+
+git mv src/ui_window.* src/ui/
+git mv src/visual_renderer.* src/ui/
+
+git mv src/count_logger.* src/storage/
+git mv src/report_paths.* src/storage/
+git mv src/video_recorder.* src/storage/
+```
+File [`src/main.cpp`](file:///C:/dev/cpp_rtsp/src/main.cpp) tetap berada di root direktori `src/`.
 
 ---
 
-### Tahap 3: Ekstraksi Perekam Video & Logger Laporan
-- **Tujuan:** Isolasi IO penyimpanan ke file terpisah.
-- **Langkah Kerja:**
-  1. Buat [`src/video_recorder.hpp`](file:///C:/dev/cpp_rtsp/src/video_recorder.hpp) dan `src/video_recorder.cpp`:
-     - Membungkus `cv::VideoWriter` dengan metode `open()` dan `write(frame)`.
-  2. Buat [`src/count_logger.hpp`](file:///C:/dev/cpp_rtsp/src/count_logger.hpp) dan `src/count_logger.cpp`:
-     - Memindahkan fungsi `appendCount()`, rotasi file per jam, dan formatting timestamp.
+### Tahap 3: Pembaruan Path `#include`
+- **Konvensi Header:** Gunakan direktori `src/` sebagai root include (`target_include_directories(sack_core PUBLIC src)`), sehingga include ditulis secara eksplisit dan mudah dilacak:
+  - Di `src/main.cpp`:
+    ```cpp
+    #include "app/app_config.hpp"
+    #include "app/sack_counter_app.hpp"
+    ```
+  - Di `src/app/sack_counter_app.cpp`:
+    ```cpp
+    #include "app/sack_counter_app.hpp"
+    #include "app/path_resolver.hpp"
+    #include "capture/async_capture.hpp"
+    #include "detector/yolo_detector.hpp"
+    #include "storage/count_logger.hpp"
+    #include "storage/video_recorder.hpp"
+    #include "tracker/stable_tracker.hpp"
+    #include "ui/ui_window.hpp"
+    #include "ui/visual_renderer.hpp"
+    ```
+  - Di `src/ui/visual_renderer.hpp`:
+    ```cpp
+    #include "tracker/stable_tracker.hpp"
+    ```
+  - Di `src/storage/count_logger.cpp`:
+    ```cpp
+    #include "storage/count_logger.hpp"
+    #include "storage/report_paths.hpp"
+    ```
+  - Di `tests/stable_tracker_test.cpp`:
+    ```cpp
+    #include "storage/report_paths.hpp"
+    #include "tracker/stable_tracker.hpp"
+    ```
 
 ---
 
-### Tahap 4: Implementasi Facade `SackCounterApp` & Pembersihan `main.cpp`
-- **Tujuan:** Menggabungkan seluruh komponen ke dalam satu controller bersih.
-- **Langkah Kerja:**
-  1. Buat [`src/sack_counter_app.hpp`](file:///C:/dev/cpp_rtsp/src/sack_counter_app.hpp) dan `src/sack_counter_app.cpp`:
-     - Menginisialisasi komponen berdasarkan `AppConfig`.
-     - Menjalankan loop utama pemrosesan frame.
-  2. Ubah [`src/main.cpp`](file:///C:/dev/cpp_rtsp/src/main.cpp) menjadi ramping:
-     ```cpp
-     #include "app_config.hpp"
-     #include "sack_counter_app.hpp"
-     #include <iostream>
+### Tahap 4: Pembaruan `CMakeLists.txt`
+Perbarui daftar file source target `sack_core` di [`CMakeLists.txt`](file:///C:/dev/cpp_rtsp/CMakeLists.txt):
+```cmake
+add_library(sack_core
+    src/app/app_config.cpp
+    src/app/path_resolver.cpp
+    src/app/sack_counter_app.cpp
+    src/capture/async_capture.cpp
+    src/detector/yolo_detector.cpp
+    src/storage/count_logger.cpp
+    src/storage/report_paths.cpp
+    src/storage/video_recorder.cpp
+    src/tracker/stable_tracker.cpp
+    src/ui/ui_window.cpp
+    src/ui/visual_renderer.cpp
+)
 
-     int main(int argc, char** argv) {
-         try {
-             const AppConfig config = AppConfig::parse(argc, argv);
-             SackCounterApp app(config);
-             return app.run();
-         } catch (const std::exception& error) {
-             std::cerr << "ERROR: " << error.what() << '\n';
-             AppConfig::printUsage();
-             return 1;
-         }
-     }
-     ```
-
----
-
-### Tahap 5: Pembaruan `CMakeLists.txt` & Regression Testing
-- **Langkah Kerja:**
-  1. Perbarui daftar file source di [`CMakeLists.txt`](file:///C:/dev/cpp_rtsp/CMakeLists.txt):
-     ```cmake
-     add_library(sack_core
-         src/app_config.cpp
-         src/async_capture.cpp
-         src/count_logger.cpp
-         src/path_resolver.cpp
-         src/report_paths.cpp
-         src/sack_counter_app.cpp
-         src/stable_tracker.cpp
-         src/ui_window.cpp
-         src/video_recorder.cpp
-         src/visual_renderer.cpp
-         src/yolo_detector.cpp
-     )
-     ```
-  2. Jalankan build dan test:
-     ```powershell
-     .\build.ps1
-     .\tests\run_benchmark.ps1
-     ```
-  3. Pastikan semua fitur lama tetap berfungsi 100% tanpa regresi.
+target_include_directories(sack_core PUBLIC
+    src
+    "${ONNXRUNTIME_INCLUDE_DIR}"
+    "${DIRECTML_INCLUDE_DIR}"
+)
+```
 
 ---
 
-## 6. Kriteria Penerimaan (Acceptance Criteria)
+### Tahap 5: Kompilasi, Regression Testing, dan Verifikasi
+1. Jalankan script build bawaan:
+   ```powershell
+   .\build.ps1
+   ```
+2. Jalankan benchmark testing:
+   ```powershell
+   .\tests\run_benchmark.ps1
+   ```
+3. Pastikan 100% tes unit lulus tanpa kendala dan file `sack_rtsp.exe` terkompilasi sempurna.
 
-- [x] File `src/main.cpp` berukuran kurang dari 50 baris kode (saat ini 16 baris) dan hanya berisi *entry point*.
-- [x] Setiap fungsi terpisah ke dalam modul header (`.hpp`) dan implementasi (`.cpp`) masing-masing.
-- [x] Arsitektur mengimplementasikan pola **Pipeline** dan **Facade (`SackCounterApp`)** dengan jelas.
-- [x] Seluruh fitur fungsional lama tetap berjalan normal:
-  - Deteksi model dinamis (`path_resolver`).
-  - Window resizable tanpa scrollbar (`ui_window`).
-  - Shortcut keyboard `H` (hide), `M` (minimize), `F` (fullscreen), `Q` (quit).
-  - Tampilan bounding box confidence rendah `[LOW]`.
-  - Penyimpanan video MP4 & log file per jam.
-- [x] Proyek berhasil dikompilasi tanpa error (`build.ps1`) dan unit test lulus 100%.
+---
+
+## 5. Kriteria Penerimaan (Acceptance Criteria)
+
+- [x] File-file di dalam `src/` telah terdistribusi ke dalam 6 subfolder terpisah (`app`, `capture`, `detector`, `tracker`, `ui`, `storage`).
+- [x] Root direktori `src/` hanya berisi `main.cpp` dan folder-folder modul.
+- [x] Seluruh `#include` menggunakan path terstruktur (`#include "folder/file.hpp"`).
+- [x] Proyek berhasil dikompilasi dengan sukses melalui `build.ps1` tanpa error path include.
+- [x] Unit test `stable_tracker_test` dan benchmark suite `run_benchmark.ps1` lulus 100% (*Zero Regression*).
+- [x] Riwayat perubahan file dilacak menggunakan Git (`git mv`).

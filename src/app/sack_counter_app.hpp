@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app_config.hpp"
+#include "app/app_config.hpp"
 
 class SackCounterApp {
 public:

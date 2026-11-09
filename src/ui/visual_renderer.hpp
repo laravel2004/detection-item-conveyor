@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stable_tracker.hpp"
+#include "tracker/stable_tracker.hpp"
 #include <opencv2/core.hpp>
 #include <vector>
 

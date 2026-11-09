@@ -1,13 +1,13 @@
-#include "sack_counter_app.hpp"
+#include "app/sack_counter_app.hpp"
 
-#include "async_capture.hpp"
-#include "count_logger.hpp"
-#include "path_resolver.hpp"
-#include "stable_tracker.hpp"
-#include "ui_window.hpp"
-#include "video_recorder.hpp"
-#include "visual_renderer.hpp"
-#include "yolo_detector.hpp"
+#include "app/path_resolver.hpp"
+#include "capture/async_capture.hpp"
+#include "detector/yolo_detector.hpp"
+#include "storage/count_logger.hpp"
+#include "storage/video_recorder.hpp"
+#include "tracker/stable_tracker.hpp"
+#include "ui/ui_window.hpp"
+#include "ui/visual_renderer.hpp"
 
 #include <opencv2/videoio.hpp>
 
