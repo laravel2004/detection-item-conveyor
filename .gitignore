@@ -1,0 +1,81 @@
+# ==========================================
+# C++ / CMake / Visual Studio .gitignore
+# ==========================================
+
+# Build directories & outputs
+build/
+bin/
+out/
+x64/
+x86/
+Debug/
+Release/
+[Bb]in/
+[Oo]bj/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Visual Studio / MSVC artifacts
+.vs/
+*.sln.docstates
+*.suo
+*.user
+*.userosscache
+*.sln.ide
+*.vcxproj.user
+*.aps
+*.pch
+*.ipch
+*.idb
+*.ilk
+*.pdb
+*.exp
+*.lib
+*.dll
+*.exe
+*.obj
+*.iobj
+*.ipdb
+*.tlog
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Third-party prebuilt SDKs (DirectML, ONNX Runtime, OpenCV prebuilts ~900MB)
+# Note: GitHub menolak file > 100MB (misal: opencv_world*d.dll 134MB, pdb 282MB)
+third_party/*
+!third_party/README.md
+!third_party/**/.gitkeep
+
+# Output rekaman video & laporan deteksi
+runs/
+report/
+*.mp4
+*.avi
+*.mkv
+
+# Temporary log & text files
+*.log
+scratch/
+
+# Local sensitive configuration & scripts (Mencegah kebocoran IP / password kamera)
+command.txt
+run.txt
+prompt.txt
+.env
+.env.local
